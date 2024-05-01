@@ -1,31 +1,28 @@
 import albumentations as A
 import gc
 import matplotlib.pyplot as plt
-import math
-# import multiprocessing
 import numpy as np
 import os
 import pandas as pd
-import pywt
 import random
+import datetime
 import time
+import joblib
 import torch
 import torch.nn as nn
 import random
 import timm
 import librosa
-import joblib
-import warnings
 import copy
 import csv
 import tqdm
-from sktime.utils import mlflow_sktime
-from sktime.classification.kernel_based import RocketClassifier
 from sklearn.metrics import accuracy_score
-import pickle
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn.functional as F
 from tqdm import tqdm
+from torchtest import assert_vars_change
+#DO NOT DELETE THIS
+from xgboost import XGBClassifier
 
 
 USE_WAVELET = None
@@ -70,9 +67,9 @@ def spectrogram_from_eeg(parquet_path, display=False):
             if np.isnan(x).mean()<1: x = np.nan_to_num(x,nan=m)
             else: x[:] = 0
 
-            # DENOISE
-            if USE_WAVELET:
-                x = denoise(x, wavelet=USE_WAVELET)
+            # # DENOISE
+            # if USE_WAVELET:
+            #     x = denoise(x, wavelet=USE_WAVELET)
             signals.append(x)
 
             # RAW SPECTROGRAM
@@ -93,7 +90,7 @@ def spectrogram_from_eeg(parquet_path, display=False):
         if display:
             plt.subplot(2,2,k+1)
             plt.imshow(img[:,:,k],aspect='auto',origin='lower')
-            plt.title(f'EEG {eeg_id} - Spectrogram {NAMES[k]}')
+            # plt.title(f'EEG {eeg_id} - Spectrogram {NAMES[k]}')
 
     if display:
         plt.show()
@@ -104,7 +101,7 @@ def spectrogram_from_eeg(parquet_path, display=False):
             plt.plot(range(10_000),signals[k]+offset,label=NAMES[3-k])
             offset += signals[3-k].max()
         plt.legend()
-        plt.title(f'EEG {eeg_id} Signals')
+        # plt.title(f'EEG {eeg_id} Signals')
         plt.show()
         print(); print('#'*25); print()
 
@@ -136,7 +133,6 @@ class FusionDataset(Dataset):
             feature_row = pd.read_csv(self.paths.FINAL_FEATURE_FOLDER + str(row.eeg_id) + '.csv').iloc[:, 2:]
         except FileNotFoundError as e:
           return None
-
         xg_in = self.get_xgboost_output(feature_row)
         return (torch.tensor(en_X, dtype=torch.float32),
                 rocket_in,
@@ -161,11 +157,10 @@ class FusionDataset(Dataset):
         return rocket_predictions  #, self.df.iloc[ind]['expert_consensus']
 
     def get_xgboost_output(self,feature_row):
-        
         x = feature_row.values.reshape(1, -1)
         xg_probs = self.xgboost_model.predict_proba(x)[0]
         return torch.tensor(xg_probs, dtype=torch.float32)
-
+    
     def __EN_data_generation(self, row):
         """
         Generates usable data from parquets
@@ -270,7 +265,7 @@ class FusionModel(nn.Module):
         super(FusionModel, self).__init__()
         self.EfficientNet = EN_Model
         self.EN_out = 1280
-        self.encoder_out = 24
+        self.encoder_out = 48
         self.hidden = 10
         self.num_classes = 6
         if not freeze:
@@ -290,17 +285,17 @@ class FusionModel(nn.Module):
         try:
             combined_features = torch.cat((EN_features, rocket.squeeze(), xg), dim=1)
         except:
-            print(EN_features, rocket.squeeze(), xg)
-            raise
+            # print(EN_features, rocket.squeeze(), xg)
+            combined_features = torch.cat((EN_features, rocket.squeeze().unsqueeze(0), xg), dim=1)
+            # raise
         out = self.classifier(combined_features)
         return F.softmax(out, dim = 1)
 
 def train_model(model, criterion, optimizer, dataloaders, device, paths, config, num_epochs=5,):
-    # torch.backends.cudnn.enabled = False
+    torch.backends.cudnn.enabled = False
     since = time.time()
-    best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
-    current = time.time()
+    current = datetime.datetime.now().minute
     if isinstance(criterion, nn.KLDivLoss):
         print("KL")
         KL = True
@@ -309,10 +304,10 @@ def train_model(model, criterion, optimizer, dataloaders, device, paths, config,
 
     dataset_sizes  = {x: len(dataloaders[x]) * config.BATCH_SIZE for x in ['train', 'val']}
 
-    with open(f'/home/Ramizire/content/gcs/fusion/fusion_training_results{str(current)[:3]}.csv', 'w', newline='') as file:
+    with open(f'/home/Ramizire/content/gcs/fusion/fusion_training_results{str(current)}.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['epoch', 'phase', 'loss', 'accuracy'])
-        print('result file: ' + f'/home/Ramizire/content/gcs/fusion/fusion_training_results{str(current)[:2]}.csv')
+        print('result file: ' + f'/home/Ramizire/content/gcs/fusion/fusion_training_results{str(current)}.csv')
         for epoch in range(num_epochs):
             print(f'Epoch {epoch}/{num_epochs - 1}')
             print('-' * 10)
@@ -340,29 +335,21 @@ def train_model(model, criterion, optimizer, dataloaders, device, paths, config,
                     # track history if only in train
                     with torch.set_grad_enabled(phase == 'train'):
                         outputs = model(X, rocket, xg)
+                    
                         _, preds = torch.max(outputs, 1)
                         _, consensus = torch.max(labels, 1)
-                        # print(outputs)
-                        # print(labels)
-                        # print(torch.sum(labels, dim = 1))
-                        # print(labels/torch.sum(labels, dim = 1).unsqueeze(1))
-                        # print(torch.log(outputs))
-                        # print(torch.log(labels/torch.sum(labels, dim = 1).unsqueeze(1)))
-                        print("outputs and labels")
-                        print(outputs, labels/torch.sum(labels, dim = 1).unsqueeze(1))
                         if not KL:
                             loss = criterion(outputs, labels/torch.sum(labels, dim = 1).unsqueeze(1))
                         else:
-                            loss = criterion(torch.log(outputs),torch.log(labels/torch.sum(labels, dim = 1)))
-                        print("losssss")
-                        print(loss)
+                            loss = criterion(torch.log(outputs),labels/torch.sum(labels, dim = 1).unsqueeze(1))
+                        print("loss: ",end = '')
+                        print('{:0.3f}'.format(loss.item()))
                         # backward + optimize only if in training phase
                         if phase == 'train':
-                            print('back propagating')
                             loss.backward()
                             optimizer.step()
 
-                    # statistics
+                   # statistics
                     running_loss += loss.item() * labels.size(0)
                     running_corrects += torch.sum(preds == consensus.data)
 
@@ -378,7 +365,6 @@ def train_model(model, criterion, optimizer, dataloaders, device, paths, config,
                 if phase == 'val' and epoch_acc > best_acc:
                     print('saving')
                     best_acc = epoch_acc
-                    best_model_wts = copy.deepcopy(model.state_dict())
                     torch.save(model.state_dict(), paths.SAVE_PATH + f'fusion_epoch_{epoch}.pth')
 
             print()
@@ -387,6 +373,33 @@ def train_model(model, criterion, optimizer, dataloaders, device, paths, config,
     print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
     print(f'Best val Acc: {best_acc:4f}')
 
-    # load best model weights
-    # model.load_state_dict(best_model_wts)
     return model
+
+def test_model(model, criterion, testloader, device):
+    model.eval()
+    running_loss = 0.0
+    running_corrects = 0
+    dataset_size = len(testloader.dataset)
+
+    with torch.no_grad():
+        for batch in tqdm(testloader, unit="batch", total=len(testloader)):
+            X = batch['X'].to(device)
+            rocket = batch['rocket'].to(device)
+            xg = batch['xg'].to(device)
+            labels = batch['label'].to(device)
+
+            outputs = model(X, rocket, xg)
+            if isinstance(criterion, nn.KLDivLoss):
+                loss = criterion(torch.log(outputs), labels/torch.sum(labels, dim=1).unsqueeze(1))
+            else:
+                loss = criterion(outputs, labels/torch.sum(labels, dim=1).unsqueeze(1))
+            
+            _, preds = torch.max(outputs, 1)
+            _, consensus = torch.max(labels, 1)
+            running_loss += loss.item() * labels.size(0)
+            running_corrects += torch.sum(preds == consensus.data)
+
+    average_loss = running_loss / dataset_size
+    accuracy = running_corrects.double() / dataset_size
+    print(f'Average Loss: {average_loss:.4f}, Accuracy: {accuracy:.4f}')
+    return average_loss, accuracy

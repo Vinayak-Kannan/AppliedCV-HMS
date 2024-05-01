@@ -10,6 +10,7 @@ class paths:
     FEATURE_FOLDER = "/content/gcs/hms-harmful-brain-activity-classification/"
     COMBINED_FEATURES = "/content/gcs/hms-harmful-brain-activity-classification/combined_sorted_features.csv"
     FUSION_DATA = "/content/gcs/hms-harmful-brain-activity-classification/cleaned_train.csv"
+    TEST_DATA = "/content/gcs/hms-harmful-brain-activity-classification/cleaned_test.csv"
     FINAL_FEATURE_FOLDER = "/content/gcs/features/"
     ROCKET_DIR = "/content/gcs/models/rocket/"
     XG_MODEL = "/content/gcs/models/xgboost_model.pkl"
@@ -22,13 +23,13 @@ class paths:
                 setattr(cls, attr_name, prefix + getattr(cls, attr_name))
 
 class config:
-    BATCH_SIZE = 4
+    BATCH_SIZE = 16
     MODEL = "tf_efficientnet_b0"
     NUM_WORKERS = 0
     PRINT_FREQ = 20
-    SEED = 20
+    SEED = 0
     VISUALIZE = False
-    N_EPOCHS = 15
+    N_EPOCHS = 10
     LR = 1e-3
     LABEL_COLS = ['seizure_vote', 'lpd_vote', 'gpd_vote', 'lrda_vote', 'grda_vote', 'other_vote']
-    EXCESS = 0.999
+    EXCESS = 0.5
