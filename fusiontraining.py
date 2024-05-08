@@ -36,7 +36,7 @@ def main():
         dataset.xgboost_model = joblib.load(paths.XG_MODEL)
 
     excess, fusion_dataset = random_split(fusion_dataset, [config.EXCESS, 1-config.EXCESS], generator=torch.Generator().manual_seed(0))
-    train_set, val_set = random_split(fusion_dataset, [.7, .3], generator=torch.Generator().manual_seed(0))
+    train_set, val_set = random_split(fusion_dataset, [.8, .2], generator=torch.Generator().manual_seed(0))
     train_loader = DataLoader(train_set,
         batch_size=config.BATCH_SIZE,
         shuffle=False,

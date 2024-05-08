@@ -43,7 +43,7 @@ def main():
     Fusion_Model = FusionModel(EN_model, freeze=True).to(device)
     Fusion_Model.to(device)
     print('loading')
-    weights = torch.load('/home/Ramizire/content/gcs/models/fusion_epoch_1.pth')
+    weights = torch.load('/home/Ramizire/content/gcs/models/fusion_epoch_7.pth')
     Fusion_Model.load_state_dict(weights)
     criterion = nn.KLDivLoss(reduction = 'batchmean')
 
