@@ -10,6 +10,6 @@ The files here are not intended to be run but to show the work by the team to bu
 We also have a live deployment for our model, hosted on a Huggingface Space [here](https://huggingface.co/spaces/ramanodgers/HMSDemo). 
 This is synced with another github repo for a smoother workflow: [here](https://github.com/ramanodgers/HMSDemo).
 
-You should be able to drag and drop an EEG file on the huggingface space and receive an accurate EEG classification. 
+You should be able to drag and drop an EEG and spectrogram file on the huggingface space and receive an accurate EEG classification. 
 We provide an 'example_eeg.parquet' file for this purpose in the demo repository.  
 
