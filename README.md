@@ -8,6 +8,10 @@ The files here are not intended to be run but to show the work by the team to bu
 
 `fusion[config,training,utils].py` and `modeltest.py` Are the final model train and test files. 
 Fusiontraining is a simple wrapper file that instantiates relevant input models, and trains by calling methods from Fusionutils. Fusionconfig sets relevant paths and hyperparameters for the training process. 
+Modeltest contains our testing pipeline. 
+Rocket and xgboost directories contain respective model files. 
+The EfficientNet and Ensemble model files are hosted in a Model repo on HuggingFace [here](https://huggingface.co/ramanodgers/HMSensemble)
+`FMdiagram.png` displays the computation graph of the final ensemble model. 
 
 # Huggingface: HMSDemo
 We also have a live deployment for our model, hosted on a Huggingface Space [here](https://huggingface.co/spaces/ramanodgers/HMSDemo). 
