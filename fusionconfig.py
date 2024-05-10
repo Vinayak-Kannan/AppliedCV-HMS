@@ -16,6 +16,7 @@ class paths:
     XG_MODEL = "/content/gcs/models/xgboost_model.pkl"
     SAVE_PATH = "/content/gcs/models/"
 
+    #hepler function to prepend a path prefix to all paths
     @classmethod
     def prepend_path_prefix(cls, prefix):
         for attr_name in dir(cls):
