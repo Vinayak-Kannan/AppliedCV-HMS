@@ -19,6 +19,7 @@ The EfficientNet and Ensemble model files are hosted in a Model repo on HuggingF
 `FMdiagram.png` displays the computation graph of the final ensemble model. 
 
 Training can be run simply with `python fusiontraining.py`
+Test9.out holds our final best accuracy and loss scores. 
 
 # Huggingface: HMSDemo
 We also have a live deployment for our model, hosted on a Huggingface Space [here](https://huggingface.co/spaces/ramanodgers/HMSDemo). 
