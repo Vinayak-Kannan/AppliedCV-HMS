@@ -18,6 +18,7 @@ from fusionutils import *
 from fusionconfig import *
 
 def main():
+    ''' bare bones model testing script for the fusion model, simply change the model path below and run'''
     device = torch.device("cuda:0")
     paths.prepend_path_prefix("/home/Ramizire")
     seed_everything(config.SEED)
@@ -43,7 +44,7 @@ def main():
     Fusion_Model = FusionModel(EN_model, freeze=True).to(device)
     Fusion_Model.to(device)
     print('loading')
-    weights = torch.load('/home/Ramizire/content/gcs/models/fusion_epoch_7.pth')
+    weights = torch.load('/home/Ramizire/content/gcs/models/fusion_epoch_9.pth')
     Fusion_Model.load_state_dict(weights)
     criterion = nn.KLDivLoss(reduction = 'batchmean')
 

@@ -37,12 +37,15 @@ FEATS = [['Fp1','F7','T3','T5','O1'],
 
 
 def seed_everything(seed: int):
+    #set random seed in all packages for reproducibility
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
 
 def spectrogram_from_eeg(parquet_path, display=False):
+    '''converts EEG series to spectrogram'''
+
     # LOAD MIDDLE 50 SECONDS OF EEG SERIES
     eeg = pd.read_parquet(parquet_path)
     middle = (len(eeg)-10_000)//2
@@ -108,6 +111,10 @@ def spectrogram_from_eeg(parquet_path, display=False):
     return img
 
 class FusionDataset(Dataset):
+    ''' 
+    Custom dataset for complex fusion model input.
+    Uses EN, Rocket, and XGBoost models to generate data
+    '''
     def __init__(
         self,
         df: pd.DataFrame,
@@ -205,6 +212,9 @@ def collate_fn(batch):
     return {'X': X, 'rocket': rocket, 'xg': xg, 'label': y }
 
 class EfficientNet(nn.Module):
+    '''
+    Custom EfficientNet model for EEG data
+    '''
     def __init__(self, config, num_classes: int = 6):
         super(EfficientNet, self).__init__()
         self.USE_KAGGLE_SPECTROGRAMS = True
@@ -304,10 +314,10 @@ def train_model(model, criterion, optimizer, dataloaders, device, paths, config,
 
     dataset_sizes  = {x: len(dataloaders[x]) * config.BATCH_SIZE for x in ['train', 'val']}
 
-    with open(f'/home/Ramizire/content/gcs/fusion/fusion_training_results{str(current)}.csv', 'w', newline='') as file:
+    with open(f'/content/gcs/fusion/fusion_training_results{str(current)}.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['epoch', 'phase', 'loss', 'accuracy'])
-        print('result file: ' + f'/home/Ramizire/content/gcs/fusion/fusion_training_results{str(current)}.csv')
+        print('result file: ' + f'/content/gcs/fusion/fusion_training_results{str(current)}.csv')
         for epoch in range(num_epochs):
             print(f'Epoch {epoch}/{num_epochs - 1}')
             print('-' * 10)

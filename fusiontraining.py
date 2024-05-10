@@ -20,6 +20,8 @@ from fusionconfig import *
 def main():
     device = torch.device("cuda:0")
     torch.cuda.empty_cache()
+
+    #modify paths for the environment
     paths.prepend_path_prefix("/home/Ramizire")
     seed_everything(config.SEED)
 
@@ -37,6 +39,7 @@ def main():
 
     excess, fusion_dataset = random_split(fusion_dataset, [config.EXCESS, 1-config.EXCESS], generator=torch.Generator().manual_seed(0))
     train_set, val_set = random_split(fusion_dataset, [.8, .2], generator=torch.Generator().manual_seed(0))
+
     train_loader = DataLoader(train_set,
         batch_size=config.BATCH_SIZE,
         shuffle=False,
@@ -71,6 +74,7 @@ def main():
     criterion = nn.KLDivLoss(reduction = 'batchmean')
     # criterion = nn.CrossEntropyLoss()
 
+    #can return model for immediate inference. 
     model = train_model(Fusion_Model, criterion, optimizer,dataloaders,device, paths, config, num_epochs=config.N_EPOCHS )
 
 if __name__ == '__main__':
